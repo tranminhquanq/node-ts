@@ -1,0 +1,137 @@
+import * as crypto from 'node:crypto'
+import jwt from 'jsonwebtoken'
+import { Errors } from '@internal/errors'
+import { getConfig } from 'config'
+
+const { jwtAlgorithm } = getConfig()
+
+const JWT_HMAC_ALGOS: jwt.Algorithm[] = ['HS256', 'HS384', 'HS512']
+const JWT_RSA_ALGOS: jwt.Algorithm[] = ['RS256', 'RS384', 'RS512']
+const JWT_ECC_ALGOS: jwt.Algorithm[] = ['ES256', 'ES384', 'ES512']
+const JWT_ED_ALGOS: jwt.Algorithm[] = ['EdDSA'] as unknown as jwt.Algorithm[] // types for EdDSA not yet updated
+
+type Jwks = { keys: { kid?: string; kty: string }[] }
+export function findJWKFromHeader(header: jwt.JwtHeader, secret: string, jwks: Jwks | null) {
+  if (!jwks || !jwks.keys) return secret
+
+  if (JWT_HMAC_ALGOS.indexOf(header.alg as jwt.Algorithm) > -1) {
+    // JWT is using HS, find the proper key
+
+    if (!header.kid && header.alg === jwtAlgorithm) {
+      // jwt is probably signed with the static secret
+      return secret
+    }
+
+    // find the first key without a kid or with the matching kid and the "oct" type
+    const jwk = jwks.keys.find(
+      (key) => (!key.kid || key.kid === header.kid) && key.kty === 'oct' && (key as any).k
+    )
+
+    if (!jwk) {
+      // jwt is probably signed with the static secret
+      return secret
+    }
+
+    return Buffer.from((jwk as any).k, 'base64')
+  }
+
+  // jwt is using an asymmetric algorithm
+  let kty = 'RSA'
+
+  if (JWT_ECC_ALGOS.indexOf(header.alg as jwt.Algorithm) > -1) {
+    kty = 'EC'
+  } else if (JWT_ED_ALGOS.indexOf(header.alg as jwt.Algorithm) > -1) {
+    kty = 'OKP'
+  }
+
+  // find the first key with a matching kid (or no kid if none is specified in the JWT header) and the correct key type
+  const jwk = jwks.keys.find((key) => {
+    return ((!key.kid && !header.kid) || key.kid === header.kid) && key.kty === kty
+  })
+
+  if (!jwk) {
+    // couldn't find a matching JWK, try to use the secret
+    return secret
+  }
+
+  return crypto.createPublicKey({
+    format: 'jwk',
+    key: jwk,
+  })
+}
+
+export function getJwtVerificationKey(secret: string, jwks: Jwks | null): jwt.GetPublicKeyOrSecret {
+  return (header: jwt.JwtHeader, callback: jwt.SigningKeyCallback) => {
+    let result: any = null
+
+    try {
+      result = findJWKFromHeader(header, secret, jwks)
+    } catch (e: any) {
+      return callback(e)
+    }
+
+    return callback(null, result)
+  }
+}
+
+export function getJWTAlgorithms(jwks: Jwks | null) {
+  let algorithms: jwt.Algorithm[]
+
+  if (jwks && jwks.keys && jwks.keys.length) {
+    const hasRSA = jwks.keys.find((key) => key.kty === 'RSA')
+    const hasECC = jwks.keys.find((key) => key.kty === 'EC')
+    const hasED = jwks.keys.find(
+      (key) => key.kty === 'OKP' && ((key as any).crv === 'Ed25519' || (key as any).crv === 'Ed448')
+    )
+    const hasHS = jwks.keys.find((key) => key.kty === 'oct' && (key as any).k)
+
+    algorithms = [
+      jwtAlgorithm as jwt.Algorithm,
+      ...(hasRSA ? JWT_RSA_ALGOS : []),
+      ...(hasECC ? JWT_ECC_ALGOS : []),
+      ...(hasED ? JWT_ED_ALGOS : []),
+      ...(hasHS ? JWT_HMAC_ALGOS : []),
+    ]
+  } else {
+    algorithms = [jwtAlgorithm as jwt.Algorithm]
+  }
+
+  return algorithms
+}
+
+export function verifyJWT<T>(
+  token: string,
+  secret: string,
+  jwks?: Jwks | null
+): Promise<jwt.JwtPayload & T> {
+  return new Promise((resolve, reject) => {
+    jwt.verify(
+      token,
+      getJwtVerificationKey(secret, jwks || null),
+      { algorithms: getJWTAlgorithms(jwks || null) },
+      (err, decoded) => {
+        if (err) return reject(Errors.AccessDenied(err.message, err))
+        resolve(decoded as jwt.JwtPayload & T)
+      }
+    )
+  })
+}
+
+export function signJWT(
+  payload: string | object | Buffer,
+  secret: string,
+  expiresIn: string | number | undefined
+): Promise<string> {
+  const options: jwt.SignOptions = { algorithm: jwtAlgorithm as jwt.Algorithm }
+
+  if (expiresIn) {
+    options.expiresIn = expiresIn
+  }
+
+  return new Promise<string>((resolve, reject) => {
+    jwt.sign(payload, secret, options, (err, token) => {
+      if (err) return reject(err)
+      resolve(token as string)
+    })
+  })
+}

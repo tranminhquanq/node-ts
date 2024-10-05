@@ -1,0 +1,57 @@
+{
+  "name": "node-ts",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.ts",
+  "engines": {
+    "node": ">= 14.0.0"
+  },
+  "scripts": {
+    "dev": "tsx watch src/cmd/server.ts | pino-pretty",
+    "build": "node ./build.js && resolve-tspaths",
+    "start": "NODE_ENV=production node dist/cmd/server.js",
+    "format": "prettier -c --write src/**",
+    "lint": "prettier -v && prettier -c src/**"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@fastify/error": "^4.0.0",
+    "@types/crypto-js": "^4.2.2",
+    "@types/jsonwebtoken": "^9.0.7",
+    "@types/node": "^22.7.4",
+    "@types/xml2js": "^0.4.14",
+    "esbuild": "^0.24.0",
+    "eslint": "^9.12.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-plugin-prettier": "^5.2.1",
+    "pino-pretty": "^11.2.2",
+    "prettier": "^3.3.3",
+    "resolve-tspaths": "^0.8.22",
+    "ts-node-dev": "^2.0.0",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.2"
+  },
+  "dependencies": {
+    "@fastify/accepts": "^5.0.1",
+    "@fastify/swagger": "^9.1.0",
+    "@fastify/swagger-ui": "^5.0.1",
+    "@isaacs/ttlcache": "^1.4.1",
+    "@opentelemetry/instrumentation": "^0.53.0",
+    "@opentelemetry/sdk-trace-base": "^1.26.0",
+    "@shopify/semaphore": "^3.1.0",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.5",
+    "fastify": "^5.0.0",
+    "fastify-metrics": "^12.1.0",
+    "fastify-plugin": "^5.0.1",
+    "fastify-xml-body-parser": "^2.2.0",
+    "json-schema-to-ts": "^3.1.1",
+    "jsonwebtoken": "^9.0.2",
+    "pino": "^9.4.0",
+    "pino-logflare": "^0.4.2",
+    "prom-client": "^15.1.3",
+    "xml2js": "^0.6.2"
+  }
+}
