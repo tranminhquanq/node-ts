@@ -112,7 +112,6 @@ export function buildTransport(): pino.TransportMultiOptions | undefined {
     throw new Error('must provider a logflare source token')
   }
 
-
   return {
     targets: [
       {

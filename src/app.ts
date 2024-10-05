@@ -1,6 +1,5 @@
 import fastify, { FastifyInstance, FastifyServerOptions } from 'fastify'
-import fastifySwagger from '@fastify/swagger'
-import fastifySwaggerUi from '@fastify/swagger-ui'
+import swagger from './swagger'
 import { getConfig } from './config'
 import { onError, plugins, routes } from './http'
 
@@ -20,28 +19,7 @@ const build = (opts: buildOpts = {}): FastifyInstance => {
   // kong should take care of cors
   // app.register(fastifyCors)
 
-  if (opts.exposeDocs) {
-    app.register(fastifySwagger, {
-      openapi: {
-        info: {
-          title: 'Node Backend API',
-          description: 'API documentation for Node Backend',
-          version: version,
-        },
-        tags: [
-          { name: 'object', description: 'Object end-points' },
-          { name: 'bucket', description: 'Bucket end-points' },
-          { name: 's3', description: 'S3 end-points' },
-          { name: 'transformation', description: 'Image transformation' },
-          { name: 'resumable', description: 'Resumable Upload end-points' },
-        ],
-      },
-    })
-
-    app.register(fastifySwaggerUi, {
-      routePrefix: '/documentation',
-    })
-  }
+  if (opts.exposeDocs) swagger(app).register()
 
   app.register(plugins.signals)
   // app.register(plugins.tenantId)
