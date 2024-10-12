@@ -1,6 +1,6 @@
 import fastify, { FastifyInstance, FastifyServerOptions } from 'fastify'
 import swagger from './swagger'
-import { getConfig } from './config'
+import { getConfig } from 'config'
 import { onError, plugins, routes } from './http'
 
 interface buildOpts extends FastifyServerOptions {
@@ -26,7 +26,7 @@ const build = (opts: buildOpts = {}): FastifyInstance => {
   // app.register(plugins.metrics({ enabledEndpoint: true }))
   // app.register(plugins.tracing)
   // app.register(plugins.logRequest({ excludeUrls: ['/status', '/metrics', '/health'] }))
-  app.register(routes.healthcheck, { prefix: 'health' })
+  // app.register(routes.healthcheck, { prefix: 'health' })
 
   app.server.keepAliveTimeout = keepAliveTimeout * 1000
   app.server.headersTimeout = headersTimeout * 1000

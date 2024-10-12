@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import fastifySwagger from '@fastify/swagger'
 import fastifySwaggerUi from '@fastify/swagger-ui'
-import { getConfig } from './config'
+import { getConfig } from 'config'
 
 const { version } = getConfig()
 
